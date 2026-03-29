@@ -1,0 +1,80 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../prisma/generated"
+  runtime      = "nodejs"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Config {
+  id         Int       @id @default(autoincrement())
+  created_at DateTime? @default(now())
+  created_by Int?
+  updated_at DateTime?
+  updated_by Int?
+  name       String    @unique @db.VarChar(255)
+  data       Json
+
+  @@index([name])
+  @@map("config")
+}
+
+model User {
+  id                  Int       @id @default(autoincrement())
+  created_at          DateTime? @default(now())
+  created_by          Int?
+  updated_at          DateTime?
+  updated_by          Int?
+  nickname            String    @db.VarChar(255)
+  username            String    @unique @db.VarChar(255)
+  password            String    @db.VarChar(255)
+  avatar              String?   @db.VarChar(512)
+  email               String    @unique @db.VarChar(255)
+  role                Int       @default(1) // 0:超级管理员 1:普通用户 2:游客
+  last_login_at       DateTime?
+  last_login_ip       String?   @db.VarChar(64)
+  last_login_location String?   @db.VarChar(255)
+  status              Int       @default(1) // 0:已删除，1:正常状态
+
+  @@index([username, email])
+  @@map("user")
+}
+
+model AccountBook {
+  id         Int       @id @default(autoincrement())
+  created_at DateTime? @default(now())
+  created_by Int?
+  updated_at DateTime?
+  updated_by Int?
+  password   String    @db.VarChar(255)
+  data       String    @db.Text
+  version    Int       @default(1)
+  status     Int       @default(1) // 0:已删除，1:正常状态
+
+  @@index([password])
+  @@map("account_book")
+}
+
+model AccountBookHistory {
+  id              Int       @id @default(autoincrement())
+  created_at      DateTime? @default(now())
+  created_by      Int?
+  updated_at      DateTime?
+  updated_by      Int?
+  account_book_id Int
+  password        String    @db.VarChar(255)
+  data            String    @db.Text
+  version         Int       @default(1)
+  status          Int       @default(1) // 0:已删除，1:正常状态
+
+  @@index([account_book_id])
+  @@map("account_book_history")
+}
