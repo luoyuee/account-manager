@@ -13,6 +13,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - 样式：Tailwind CSS
 - 组件库：Shadcn-ui 组件在 components/ui 目录
 - 状态管理：Zustand
+- 表单验证：@tanstack/react-form + Zod
 - 数据库：Prisma + PostgreSQL
 - 路由体系：App Router 模式，使用 app/ 目录
 
@@ -34,6 +35,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - 禁止自动引入未使用的依赖
 - 禁止生成不符合 App Router 结构的代码
 - 禁止自动安装依赖包，有需要时提示我手动安装
+- 禁止将组件放在 components/ui 目录下，必须放在 components 目录下
 
 ## 生成代码时必须遵循
 
