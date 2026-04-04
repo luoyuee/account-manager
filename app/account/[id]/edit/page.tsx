@@ -19,6 +19,7 @@ const schema = z.object({
   username: z.string().min(1, "请输入账号").max(100, "账号最多100个字符"),
   password: z.string().min(1, "请输入密码").max(100, "密码最多100个字符"),
   remark: z.string().max(500, "备注最多500个字符").optional(),
+  tags: z.array(z.string()).default([]),
 });
 
 export default function AccountEditPage() {
@@ -28,7 +29,6 @@ export default function AccountEditPage() {
   const { items, updateItem, removeItem } = useAccountsStore();
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [tags, setTags] = useState<string[]>([]);
 
   const existingItem = items.find((item) => item.id === id);
 
@@ -38,6 +38,7 @@ export default function AccountEditPage() {
       username: "",
       password: "",
       remark: "",
+      tags: [] as string[],
     },
     onSubmit: async ({ value }) => {
       if (!existingItem) return;
@@ -49,7 +50,7 @@ export default function AccountEditPage() {
           username: value.username.trim(),
           password: value.password.trim(),
           remark: value.remark?.trim() || undefined,
-          tags,
+          tags: value.tags,
         });
         toast.success("保存成功");
         router.replace("/");
@@ -64,13 +65,16 @@ export default function AccountEditPage() {
 
   useEffect(() => {
     if (existingItem) {
-      form.reset({
-        title: existingItem.title,
-        username: existingItem.username,
-        password: existingItem.password,
-        remark: existingItem.remark ?? "",
-      });
-      setTags(existingItem.tags);
+      form.reset(
+        {
+          title: existingItem.title,
+          username: existingItem.username,
+          password: existingItem.password,
+          remark: existingItem.remark ?? "",
+          tags: existingItem.tags,
+        },
+        { keepDefaultValues: true },
+      );
     } else {
       toast.error("账号不存在");
       router.replace("/");
@@ -262,15 +266,19 @@ export default function AccountEditPage() {
                 )}
               </form.Field>
 
-              <div className="space-y-2">
-                <Label>标签</Label>
-                <TagInput
-                  value={tags}
-                  onChange={setTags}
-                  placeholder="输入标签后按回车添加"
-                  disabled={saving}
-                />
-              </div>
+              <form.Field name="tags">
+                {(field) => (
+                  <div className="space-y-2">
+                    <Label>标签</Label>
+                    <TagInput
+                      value={field.state.value}
+                      onChange={(value) => field.handleChange(value)}
+                      placeholder="输入标签后按回车添加"
+                      disabled={saving}
+                    />
+                  </div>
+                )}
+              </form.Field>
             </form>
           </CardContent>
         </Card>

@@ -13,7 +13,7 @@ type AccountsState = {
   setHasHydrated: (state: boolean) => void;
   setPassword: (password: string) => void;
   setAccountBook: (id: number, version: number) => void;
-  setItems: (items: AccountItem[]) => void;
+  setItems: (items: AccountItem[]) => Promise<void>;
   addItem: (item: AccountItem) => Promise<void>;
   updateItem: (id: string, patch: Partial<AccountItem>) => Promise<void>;
   removeItem: (id: string) => Promise<void>;
@@ -35,7 +35,10 @@ export const useAccountsStore = create<AccountsState>()(
       setHasHydrated: (state) => set({ _hasHydrated: state }),
       setPassword: (password) => set({ password }),
       setAccountBook: (id, version) => set({ accountBookId: id, version }),
-      setItems: (items) => set({ items }),
+      setItems: async (items) => {
+        set({ items });
+        await get().sync();
+      },
       addItem: async (item) => {
         set((s) => ({ items: [item, ...s.items] }));
         await get().sync();
@@ -74,8 +77,6 @@ export const useAccountsStore = create<AccountsState>()(
         const items = get().items;
         const pwd = get().password;
 
-        console.log(items);
-
         if (!pwd) return undefined;
 
         return encrypt(
@@ -92,10 +93,8 @@ export const useAccountsStore = create<AccountsState>()(
 
         try {
           const decrypted = decrypt(data, pwd);
-          console.log(decrypted);
 
           const decryptedData = JSON.parse(decrypted) as AccountBookData;
-          console.log(decryptedData);
 
           set({ items: decryptedData.accounts });
           return true;
