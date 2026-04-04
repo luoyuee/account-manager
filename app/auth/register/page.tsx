@@ -1,16 +1,18 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@/components/ui/button";
+import { useForm } from "@tanstack/react-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Spinner } from "@/components/ui/spinner";
+import { useRouter } from "next/navigation";
 import { UserPlus } from "lucide-react";
-import { useState } from "react";
-import { useForm } from "@tanstack/react-form";
+import { register } from "@/apis/user";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 
-const registerSchema = z
+const schema = z
   .object({
     username: z.string().min(1, "请输入用户名").max(50, "用户名最多50个字符"),
     email: z.email("请输入有效的邮箱地址"),
@@ -20,27 +22,39 @@ const registerSchema = z
       .max(100, "密码最多100个字符"),
     confirmPassword: z.string().min(1, "请确认密码"),
   })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "两次输入的密码不一致",
-    path: ["confirmPassword"],
-  });
-
-type RegisterFormValues = z.infer<typeof registerSchema>;
-
-interface RegisterResponse {
-  success: boolean;
-  message: string;
-  user?: {
-    id: number;
-    username: string;
-    email: string;
-  };
-}
+  .refine(
+    (data) => {
+      return data.password === data.confirmPassword;
+    },
+    {
+      message: "两次输入的密码不一致",
+      path: ["confirmPassword"],
+    },
+  );
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [countdown, setCountdown] = useState(10);
+
+  useEffect(() => {
+    if (!success) return;
+
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          router.replace("/auth/login");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [success, router]);
 
   const form = useForm({
     defaultValues: {
@@ -48,28 +62,22 @@ export default function RegisterPage() {
       email: "",
       password: "",
       confirmPassword: "",
-    } as RegisterFormValues,
+    },
     onSubmit: async ({ value }) => {
       setError(null);
       setLoading(true);
 
       try {
-        const res = await fetch("/api/admin/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            username: value.username,
-            email: value.email,
-            password: value.password,
-          }),
+        const res = await register({
+          username: value.username,
+          email: value.email,
+          password: value.password,
         });
 
-        const data: RegisterResponse = await res.json();
-
-        if (data.success) {
+        if (res.success) {
           setSuccess(true);
         } else {
-          setError(data.message);
+          setError(res.message || "注册失败");
         }
       } catch {
         setError("注册失败，请稍后重试");
@@ -88,8 +96,11 @@ export default function RegisterPage() {
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-muted-foreground mb-4">管理员账户已创建成功</p>
-            <Button onClick={() => (window.location.href = "/admin/login")}>
-              前往登录
+            <p className="text-sm text-muted-foreground mb-4">
+              {countdown} 秒后自动跳转登录页
+            </p>
+            <Button onClick={() => (window.location.href = "/auth/login")}>
+              立即前往
             </Button>
           </CardContent>
         </Card>
@@ -122,7 +133,7 @@ export default function RegisterPage() {
               name="username"
               validators={{
                 onChange: ({ value }) => {
-                  const result = registerSchema.shape.username.safeParse(value);
+                  const result = schema.shape.username.safeParse(value);
                   return result.success
                     ? undefined
                     : result.error.issues[0]?.message;
@@ -155,7 +166,7 @@ export default function RegisterPage() {
               name="email"
               validators={{
                 onChange: ({ value }) => {
-                  const result = registerSchema.shape.email.safeParse(value);
+                  const result = schema.shape.email.safeParse(value);
                   return result.success
                     ? undefined
                     : result.error.issues[0]?.message;
@@ -188,7 +199,7 @@ export default function RegisterPage() {
               name="password"
               validators={{
                 onChange: ({ value }) => {
-                  const result = registerSchema.shape.password.safeParse(value);
+                  const result = schema.shape.password.safeParse(value);
                   return result.success
                     ? undefined
                     : result.error.issues[0]?.message;
