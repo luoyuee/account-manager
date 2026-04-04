@@ -44,3 +44,4 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - 涉及表单优先使用 React useFormState + Server Actions
 - 代码必须简洁、类型安全、可维护
 - 注释只写关键逻辑，不写废话
+- 以高安全性优先，不用考虑并发性能问题
