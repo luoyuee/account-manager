@@ -1,5 +1,6 @@
+import { hashPassword } from "@/lib/crypto";
+import { UserRoleEnum } from "@/enums";
 import { prisma } from "@/prisma";
-import crypto from "node:crypto";
 import { z } from "zod";
 import {
   badRequestResponse,
@@ -7,11 +8,6 @@ import {
   forbiddenResponse,
   okResponse,
 } from "@/lib/response";
-import { UserRoleEnum } from "@/enums";
-
-const hashPassword = (password: string): string => {
-  return crypto.createHash("sha256").update(password).digest("hex");
-};
 
 const schema = z.object({
   username: z.string().min(1, "用户名不能为空"),
@@ -29,7 +25,7 @@ export async function POST(request: Request) {
     const { username, email, password } = data;
 
     const adminCount = await prisma.user.count({
-      where: { role: UserRoleEnum.ADMIN },
+      where: { role: UserRoleEnum.ADMIN, status: 1 },
     });
 
     if (adminCount > 0) return forbiddenResponse("管理员已存在，无法注册");

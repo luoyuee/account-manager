@@ -67,7 +67,7 @@ const verifyAndDecodeToken = async (
 export async function proxy(request: NextRequest) {
   console.log(request.nextUrl.pathname);
   const { pathname } = request.nextUrl;
-  const authorization = request.cookies.get("Authorization")?.value;
+  const authorization = request.cookies.get(appConfig.JWT_COOKIE_NAME)?.value;
 
   let user: TokenPayload | null = null;
 
