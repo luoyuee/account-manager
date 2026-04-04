@@ -8,7 +8,7 @@ import { useForm } from "@tanstack/react-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { resetPassword } from "@/apis/user";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { KeyRound } from "lucide-react";
 import { z } from "zod";
 
@@ -17,7 +17,7 @@ const schema = z.object({
   confirmPassword: z.string().min(6, "请确认密码"),
 });
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -83,142 +83,154 @@ export default function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle>重置密码</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-lg text-center">
-              重置链接无效，请重新获取
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle>重置密码</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <div className="p-3 text-sm text-green-600 bg-green-50 rounded-lg text-center mb-4">
-              密码重置成功
-            </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              {countdown} 秒后自动跳转登录页
-            </p>
-            <Button onClick={() => router.replace("/auth/login")}>
-              立即跳转
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle>重置密码</CardTitle>
         </CardHeader>
         <CardContent>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              form.handleSubmit();
-            }}
-            className="space-y-4"
-          >
-            {error && (
-              <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-lg">
-                {error}
-              </div>
-            )}
-
-            <form.Field
-              name="password"
-              validators={{
-                onChange: ({ value }) => {
-                  const result = schema.shape.password.safeParse(value);
-                  return result.success
-                    ? undefined
-                    : result.error.issues[0]?.message;
-                },
-              }}
-            >
-              {(field) => (
-                <div className="space-y-2">
-                  <Label htmlFor={field.name}>新密码</Label>
-                  <Input
-                    id={field.name}
-                    name={field.name}
-                    type="password"
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="请输入新密码（至少 6 位）"
-                    disabled={loading}
-                  />
-                  {field.state.meta.errors?.[0] && (
-                    <p className="text-sm text-destructive">
-                      {field.state.meta.errors[0]}
-                    </p>
-                  )}
-                </div>
-              )}
-            </form.Field>
-
-            <form.Field
-              name="confirmPassword"
-              validators={{
-                onChange: ({ value }) => {
-                  const result = schema.shape.confirmPassword.safeParse(value);
-                  return result.success
-                    ? undefined
-                    : result.error.issues[0]?.message;
-                },
-              }}
-            >
-              {(field) => (
-                <div className="space-y-2">
-                  <Label htmlFor={field.name}>确认密码</Label>
-                  <Input
-                    id={field.name}
-                    name={field.name}
-                    type="password"
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="请再次输入新密码"
-                    disabled={loading}
-                  />
-                  {field.state.meta.errors?.[0] && (
-                    <p className="text-sm text-destructive">
-                      {field.state.meta.errors[0]}
-                    </p>
-                  )}
-                </div>
-              )}
-            </form.Field>
-
-            <Button type="submit" disabled={loading} className="w-full mt-6">
-              {loading ? (
-                <Spinner className="text-current" />
-              ) : (
-                <KeyRound data-icon="inline-start" />
-              )}
-              <span>{loading ? "重置中..." : "重置密码"}</span>
-            </Button>
-          </form>
+          <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-lg text-center">
+            重置链接无效，请重新获取
+          </div>
         </CardContent>
       </Card>
+    );
+  }
+
+  if (success) {
+    return (
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle>重置密码</CardTitle>
+        </CardHeader>
+        <CardContent className="text-center">
+          <div className="p-3 text-sm text-green-600 bg-green-50 rounded-lg text-center mb-4">
+            密码重置成功
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            {countdown} 秒后自动跳转登录页
+          </p>
+          <Button onClick={() => router.replace("/auth/login")}>
+            立即跳转
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="w-full max-w-md">
+      <CardHeader className="text-center">
+        <CardTitle>重置密码</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit();
+          }}
+          className="space-y-4"
+        >
+          {error && (
+            <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          <form.Field
+            name="password"
+            validators={{
+              onChange: ({ value }) => {
+                const result = schema.shape.password.safeParse(value);
+                return result.success
+                  ? undefined
+                  : result.error.issues[0]?.message;
+              },
+            }}
+          >
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>新密码</Label>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  type="password"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="请输入新密码（至少 6 位）"
+                  disabled={loading}
+                />
+                {field.state.meta.errors?.[0] && (
+                  <p className="text-sm text-destructive">
+                    {field.state.meta.errors[0]}
+                  </p>
+                )}
+              </div>
+            )}
+          </form.Field>
+
+          <form.Field
+            name="confirmPassword"
+            validators={{
+              onChange: ({ value }) => {
+                const result = schema.shape.confirmPassword.safeParse(value);
+                return result.success
+                  ? undefined
+                  : result.error.issues[0]?.message;
+              },
+            }}
+          >
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>确认密码</Label>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  type="password"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="请再次输入新密码"
+                  disabled={loading}
+                />
+                {field.state.meta.errors?.[0] && (
+                  <p className="text-sm text-destructive">
+                    {field.state.meta.errors[0]}
+                  </p>
+                )}
+              </div>
+            )}
+          </form.Field>
+
+          <Button type="submit" disabled={loading} className="w-full mt-6">
+            {loading ? (
+              <Spinner className="text-current" />
+            ) : (
+              <KeyRound data-icon="inline-start" />
+            )}
+            <span>{loading ? "重置中..." : "重置密码"}</span>
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Suspense
+        fallback={
+          <Card className="w-full max-w-md">
+            <CardContent className="flex items-center justify-center py-8">
+              <Spinner className="w-6 h-6" />
+            </CardContent>
+          </Card>
+        }
+      >
+        <ResetPasswordContent />
+      </Suspense>
     </div>
   );
 }

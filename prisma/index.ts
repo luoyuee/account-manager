@@ -6,8 +6,6 @@ if (!config.DATABASE_URL) {
   throw new Error("DATABASE_URL 未配置");
 }
 
-console.log(`数据库URL: ${config.DATABASE_URL}`);
-
 let schema = "public";
 
 try {
