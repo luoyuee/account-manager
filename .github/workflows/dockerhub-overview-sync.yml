@@ -1,0 +1,70 @@
+#####################################################################
+# GitHub Actions：手动同步 README 到 Docker Hub 仓库 Overview（full_description）
+#
+# 适用场景：
+# - README 更新频繁，但不希望每次构建镜像都去同步 Overview
+# - 需要在特定时机手动执行同步（例如发布版本说明后）
+#
+# 你需要在 GitHub 仓库中配置以下 Secrets：
+# - DOCKERHUB_USERNAME：Docker Hub 用户名
+# - DOCKERHUB_TOKEN：Docker Hub Access Token（建议使用 Token，不要用密码）
+# - DOCKERHUB_REPOSITORY：Docker Hub 仓库名（建议填：<用户名>/<仓库名>，例如 yourname/account-manager）
+#
+# 说明：
+# - Docker Hub 不会解析仓库内 README 的相对图片路径，所以这里会把 README 里的本地相对图片路径替换为 GitHub Raw 绝对地址
+# - 使用 Docker Hub 原生 API：先登录获取 JWT，再 PATCH 更新 full_description
+#####################################################################
+
+name: Sync Docker Hub Overview (README)
+
+on:
+  push:
+    branches:
+      - "main"
+      - "master"
+    paths:
+      - "README.md"
+      - "docs/**"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "要同步的仓库分支/标签（留空则使用当前触发的 ref）"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dockerhub-overview-sync-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sync-overview:
+    name: Sync overview
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      # 将 README 里的本地相对图片路径替换为 GitHub Raw 绝对地址
+      # 目的：Docker Hub Overview 能正确展示图片（Docker Hub 不会解析仓库内的相对路径）
+      - name: Replace README local links to GitHub raw URL + report
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/replace-readme-links-for-dockerhub.js --write --summary-file "$GITHUB_STEP_SUMMARY"
+
+      # 使用 Docker Hub 原生 API 同步 README 到 Docker Hub 仓库 Overview（full_description）
+      - name: Sync README to Docker Hub Overview (native API)
+        shell: bash
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY }}
+        run: |
+          set -euo pipefail
+          node scripts/sync-dockerhub-overview.js --readme README.md

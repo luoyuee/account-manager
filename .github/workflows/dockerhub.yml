@@ -1,0 +1,106 @@
+#####################################################################
+# GitHub Actions：每次推送后构建 Docker 镜像并推送到 Docker Hub
+#
+# 使用的 Dockerfile：
+# - 仓库根目录的 Dockerfile
+#
+# 你需要在 GitHub 仓库中配置以下 Secrets：
+# - DOCKERHUB_USERNAME：Docker Hub 用户名
+# - DOCKERHUB_TOKEN：Docker Hub Access Token（建议使用 Token，不要用密码）
+# - DOCKERHUB_REPOSITORY：Docker Hub 仓库名（建议填：<用户名>/<仓库名>，例如 yourname/account-manager）
+#
+# 镜像命名规则：
+# - docker.io/<DOCKERHUB_REPOSITORY>
+#
+# 标签策略：
+# - 默认分支：latest + sha-短标签
+# - 其他分支：<branch> + sha-短标签（branch 会自动进行安全化处理）
+#####################################################################
+
+name: Build & Push Docker image (Docker Hub)
+
+on:
+  push:
+    branches:
+      - "main"
+      - "master"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dockerhub-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-push:
+    name: Build and push
+    runs-on: ubuntu-latest
+
+    env:
+      REGISTRY: docker.io
+      IMAGE_NAME: ${{ secrets.DOCKERHUB_REPOSITORY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read version from package.json
+        id: pkg
+        shell: bash
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      # 建议启用 Buildx：可获得更好的缓存能力与更稳定的构建体验
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 登录 Docker Hub：用于 push 镜像
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 生成镜像标签与 OCI 标准元数据
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ steps.pkg.outputs.version }}
+            type=ref,event=branch
+            type=sha,format=short
+
+      # 构建并推送镜像（使用仓库根目录 Dockerfile）
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Generate build summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Docker 镜像构建结果"
+            echo ""
+            echo "**状态:** ${{ job.status }}"
+            echo ""
+            echo "**镜像标签:**"
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+            echo ""
+            echo "**构建时间:** $(date)"
+          } >> "$GITHUB_STEP_SUMMARY"
